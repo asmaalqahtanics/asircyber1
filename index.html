@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>كاشف الفخاخ</title>
+<style>
+:root{--bg:#f3f6f5;--card:#fff;--ink:#12302c;--mut:#5b716d;--line:#d3dedb;--pri:#0f6b5c;--bad:#b3261e;--ok:#1b7a3d;--warn:#fff1c9;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1a18;--card:#162623;--ink:#e6f1ee;--mut:#9bb1ac;--line:#2b403c;--pri:#4cc2ad;--bad:#ff8a80;--ok:#6fd58f;--warn:#4a3d12;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.7 Tajawal,system-ui,"Segoe UI",Tahoma,sans-serif;padding:16px;max-width:640px;margin-inline:auto}
+h1{font-size:26px;margin:8px 0}h2{font-size:20px;margin:0 0 4px}p{margin:6px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.mut{color:var(--mut);font-size:15px}
+input{width:100%;padding:12px;margin:6px 0;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
+button{font:inherit;padding:12px 18px;border-radius:8px;border:1px solid var(--pri);background:var(--pri);color:var(--card);cursor:pointer;min-height:44px}
+button.alt{background:transparent;color:var(--pri)}
+button:focus-visible,.pick:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+.pick{display:block;width:100%;text-align:right;background:var(--bg);color:var(--ink);border:1px solid var(--line);margin:6px 0}
+.pick.on{background:var(--warn);border-color:var(--bad)}
+.bar{height:6px;background:var(--line);border-radius:3px;margin:8px 0}.bar i{display:block;height:100%;background:var(--pri);border-radius:3px}
+.mail{border:1px dashed var(--mut);border-radius:8px;padding:8px;margin:8px 0}
+.url{direction:ltr;text-align:left;font-family:monospace}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0}
+.seg{display:flex;gap:6px;margin:4px 0}.seg button{flex:1;padding:8px}.seg button.on{background:var(--pri);color:var(--card)}
+.ok{color:var(--ok)}.no{color:var(--bad)}
+.sw{width:56px;height:30px;border-radius:15px;background:var(--line);border:0;position:relative;padding:0;flex:none}
+.sw::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:inset-inline-start .15s}
+.sw[aria-checked=true]{background:var(--pri)}.sw[aria-checked=true]::after{inset-inline-start:29px}
+@media(prefers-reduced-motion:reduce){.sw::after{transition:none}}
+</style>
+</head>
+<body>
+<h1>كاشف الفخاخ</h1>
+<div id="app"></div>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwjfgvyBSumoS_7tFS_Oc5ix-NxFA5svFpHqr_lyYsJ1IfckhIqCGCb8puU_7SRq5Je/exec"; // ضع رابط تطبيق الويب (ينتهي بـ /exec)
+
+const TASKS = [
+ {k:"t1",type:"spot",title:"رسالة مشبوهة",hint:"اضغط على الأجزاء التي تشك فيها في هذه الرسالة. الضغط على جزء سليم يخصم من درجتك.",
+  items:["من: support@alrajhi-secure-bank.net","عميلنا العزيز،","نبلغك بوجود تحديث على بياناتك.","إذا لم تؤكد حسابك خلال ساعتين فسيُغلق نهائيًا!","نشكر لك ثقتك بنا.","اضغط هنا للتأكيد: http://bank-verify-login.com/update","فريق خدمة العملاء","وأرسل لنا رمز التحقق الذي وصلك للتو."]},
+ {k:"t2",type:"judge",title:"آمن أم خطر؟",hint:"احكم على كل تصرف.",
+  items:["تفعيل التحقق بخطوتين في حسابك","إعطاء رمز التحقق لموظف اتصل بك وقال إنه من البنك","الاتصال بالبنك من الرقم المطبوع خلف البطاقة","استخدام كلمة مرور واحدة لكل حساباتك","تحديث الجوال من الإعدادات الرسمية","فتح رابط «فزت بجائزة» وصلك من رقم غريب"]},
+ {k:"t3",type:"spot",title:"موقع مزيف",hint:"هذه صفحة بنك وهمية. اضغط على الأشياء المريبة فيها.",
+  items:["العنوان: http://alrajhi-bank-login.xyz","تسجيل الدخول","🎁 اربح 5000 ريال الآن!","رقم الهوية","الرقم السري للصراف ورمز CVV","سياسة الخصوصية","كلمة المرور","⏱ حسابك سيُغلق خلال 10 دقائق!"]},
+ {k:"t4",type:"rank",title:"رتّب كلمات المرور",hint:"من الأضعف (الأول) إلى الأقوى (الأخير). استخدم الأسهم.",
+  items:[["c","Ahmed@2010"],["e","blue-Camel-River-92-Lamp"],["a","123456"],["d","Zq7#mK2!vL9p"],["b","ahmed2010"]]},
+ {k:"t5",type:"switch",title:"اضبط جوالك",hint:"فعّل ما يحميك وأغلق ما يضرّك. انتبه: واحد منها مضبوط صح من الأصل.",
+  items:[["a","قفل الشاشة برمز",false],["b","التحقق بخطوتين",false],["c","التحديثات التلقائية",false],["d","تثبيت تطبيقات من مصادر مجهولة",true],["e","الاتصال التلقائي بأي واي فاي مفتوح",true],["f","تشفير الجهاز",true]]}
+];
+const $=s=>document.querySelector(s), app=$("#app");
+let id=null, step=0, ans={}, t0=0;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function call(body){
+  const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(body)}); return r.json();
+}
+
+function login(msg){
+  app.innerHTML=`<div class="card"><h2>ابدأ التحدي</h2>
+  <p class="mut">٥ مهام قصيرة تكتشف فيها الفخاخ بنفسك. الفائز صاحب أعلى درجة، ثم الأسرع.</p>
+  <input id="em" type="email" placeholder="بريدك الإلكتروني" dir="ltr" autocomplete="email">
+  <input id="cd" placeholder="الرمز">
+  <p class="no" id="msg">${msg||""}</p><button id="go">ابدأ</button></div><div id="lb"></div>`;
+  $("#go").onclick=async()=>{
+    $("#go").disabled=true;
+    try{const r=await call({action:"start",email:$("#em").value,code:$("#cd").value});
+      if(r.error){login(r.error);return}
+      id=r.id;step=0;ans={};t0=Date.now();render();
+    }catch(e){login("تعذّر الاتصال. تأكد من رابط الخدمة.")}
+  };
+  if(!API_URL.startsWith("http")) return;
+  fetch(API_URL).then(r=>r.json()).then(r=>{
+    $("#lb").innerHTML=r.top&&r.top.length?`<div class="card"><h2>المتصدرون</h2>${r.top.map((x,i)=>`<div class="row"><span>${i+1}. <bdi>${esc(x.name)}</bdi></span><span>${x.score} · ${x.secs}ث</span></div>`).join("")}</div>`:"";
+  }).catch(()=>{});
+}
+
+function render(){
+  const t=TASKS[step];
+  app.innerHTML=`<div class="bar"><i style="width:${step*20}%"></i></div>
+  <div class="card"><p class="mut">المهمة ${step+1} من 5</p><h2>${t.title}</h2><p class="mut">${t.hint}</p><div id="body"></div>
+  <p><button id="nx">${step==4?"أنهِ وأرسل":"التالي"}</button></p></div>`;
+  const b=$("#body");
+  if(t.type=="spot"){
+    const sel=ans[t.k]=ans[t.k]||[];
+    b.innerHTML=t.items.map((x,i)=>`<button class="pick ${t.k=="t3"?"":"mail"} ${t.k=="t3"&&i==0?"url":""}" data-i="${i}" aria-pressed="false">${esc(x)}</button>`).join("");
+    b.onclick=e=>{const el=e.target.closest(".pick");if(!el)return;const i=+el.dataset.i,p=sel.indexOf(i);
+      p>-1?sel.splice(p,1):sel.push(i);el.classList.toggle("on",p<0);el.setAttribute("aria-pressed",p<0)};
+  }
+  if(t.type=="judge"){
+    const a=ans[t.k]=ans[t.k]||[];
+    b.innerHTML=t.items.map((x,i)=>`<div><p>${esc(x)}</p><div class="seg" data-i="${i}"><button data-v="1">آمن</button><button data-v="0">خطر</button></div></div>`).join("");
+    b.onclick=e=>{const el=e.target.closest("button");if(!el)return;const i=+el.parentNode.dataset.i;a[i]=el.dataset.v=="1";
+      [...el.parentNode.children].forEach(c=>c.classList.toggle("on",c==el))};
+  }
+  if(t.type=="rank"){
+    let o=ans[t.k]=ans[t.k]||t.items.map(x=>x[0]);const nm=Object.fromEntries(t.items);
+    const draw=()=>{b.innerHTML=o.map((k,i)=>`<div class="row"><span class="url">${esc(nm[k])}</span><span><button class="alt" data-i="${i}" data-d="-1" aria-label="أعلى">▲</button> <button class="alt" data-i="${i}" data-d="1" aria-label="أسفل">▼</button></span></div>`).join("")};
+    draw();
+    b.onclick=e=>{const el=e.target.closest("button");if(!el)return;const i=+el.dataset.i,j=i+ +el.dataset.d;
+      if(j<0||j>=o.length)return;[o[i],o[j]]=[o[j],o[i]];draw()};
+  }
+  if(t.type=="switch"){
+    const s=ans[t.k]=ans[t.k]||Object.fromEntries(t.items.map(x=>[x[0],x[2]]));
+    b.innerHTML=t.items.map(x=>`<div class="row"><span>${x[1]}</span><button class="sw" role="switch" data-k="${x[0]}" aria-checked="${s[x[0]]}" aria-label="${x[1]}"></button></div>`).join("");
+    b.onclick=e=>{const el=e.target.closest(".sw");if(!el)return;s[el.dataset.k]=!s[el.dataset.k];el.setAttribute("aria-checked",s[el.dataset.k])};
+  }
+  $("#nx").onclick=async()=>{
+    if(t.type=="judge"&&(ans.t2.length<6||Object.keys(ans.t2).length<6)){alert("احكم على كل التصرفات أولًا.");return}
+    if(step<4){step++;render();return}
+    $("#nx").disabled=true;$("#nx").textContent="جارٍ التصحيح…";
+    try{const r=await call({action:"submit",id,answers:ans});
+      r.error?(app.innerHTML=`<div class="card no">${r.error}</div>`):result(r)}
+    catch(e){$("#nx").disabled=false;$("#nx").textContent="أعد المحاولة"}
+  };
+}
+
+function result(r){
+  const K=r.review, sc=r.scores.map(x=>Math.round(x*10)/10), tx=i=>TASKS[i].items.map(x=>Array.isArray(x)?x[1]:x);
+  const spot=i=>{const k=TASKS[i].k,tr=K[k].traps,p=ans[k]||[];
+    return tx(i).map((x,j)=>`<p class="${tr.includes(j)?(p.includes(j)?"ok":"no"):(p.includes(j)?"no":"")}">${tr.includes(j)?(p.includes(j)?"✔ ":"✘ فاتك: "):(p.includes(j)?"✘ سليم: ":"")}${esc(x)}</p>`).join("")+`<p class="mut">${K[k].why}</p>`};
+  const jd=()=>tx(1).map((x,j)=>`<p class="${ans.t2[j]===K.t2.safe[j]?"ok":"no"}">${ans.t2[j]===K.t2.safe[j]?"✔":"✘"} ${esc(x)} — ${K.t2.safe[j]?"آمن":"خطر"}. <span class="mut">${K.t2.why[j]}</span></p>`).join("");
+  const nm=Object.fromEntries(TASKS[3].items);
+  const rk=()=>`<p>الترتيب الصحيح:</p>`+K.t4.order.map((k,i)=>`<p class="url ${ans.t4[i]==k?"ok":"no"}">${i+1}. ${esc(nm[k])}</p>`).join("")+`<p class="mut">${K.t4.why}</p>`;
+  const sw=()=>TASKS[4].items.map(x=>`<p class="${ans.t5[x[0]]===K.t5.want[x[0]]?"ok":"no"}">${ans.t5[x[0]]===K.t5.want[x[0]]?"✔":"✘"} ${x[1]}: يجب أن يكون ${K.t5.want[x[0]]?"مفعّلًا":"مغلقًا"}</p>`).join("")+`<p class="mut">${K.t5.why}</p>`;
+  const parts=[spot(0),jd(),spot(2),rk(),sw()];
+  app.innerHTML=`<div class="card"><h2>درجتك ${r.total} من 100</h2><p class="mut">الوقت: ${r.secs} ثانية</p></div>`+
+   TASKS.map((t,i)=>`<details class="card"><summary>${t.title} — ${sc[i]} من 20</summary>${parts[i]}</details>`).join("");
+}
+login();
+</script>
+</body>
+</html>
